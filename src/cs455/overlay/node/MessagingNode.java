@@ -1,16 +1,34 @@
 package cs455.overlay.node;
 
+import cs455.overlay.wireformats.RegisterRequest;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class MessagingNode {
+
+    String hostName,ipAddress;
+    int port;
+    List<MessagingNode> connectedNodes;
+
+    public MessagingNode(String hostName, String ipAddress, int port, ArrayList<MessagingNode> connectedNodes){
+        this.hostName = hostName;
+        this.ipAddress = ipAddress;
+        this.port = port;
+        this.connectedNodes = connectedNodes;
+    }
+
+
+
     public static void main (String[] args){
 
         BlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
@@ -31,14 +49,14 @@ class MessagingNodeServer extends Thread{
         try {
             InetAddress inetAddress = InetAddress.getLocalHost();
             String ipAddress = inetAddress.getHostAddress();
-            String hostName = inetAddress.getHostName();
+            String hostName = inetAddress.getCanonicalHostName();
             this.serverSocket = new ServerSocket(0);
             int port = serverSocket.getLocalPort();
 
             //Tells registry ready to register.
             this.socket = new Socket(registryAddress, registryPort);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            out.println("Message Type (int): REGISTER_REQUEST\n" + ipAddress + "\n" + port);
+            RegisterRequest.send(out);
 
             //receives message back
             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
