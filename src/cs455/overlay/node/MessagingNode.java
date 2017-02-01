@@ -1,5 +1,6 @@
 package cs455.overlay.node;
 
+import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.RegisterRequest;
 
 import java.io.BufferedReader;
@@ -14,11 +15,18 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
+import static cs455.overlay.wireformats.WireFormatConstants.REGISTER_RESPONSE;
+
 public class MessagingNode {
 
     String hostName,ipAddress;
     int port;
     List<MessagingNode> connectedNodes;
+
+    public MessagingNode(String ipAddress, int port){
+        this.ipAddress = ipAddress;
+        this.port = port;
+    }
 
     public MessagingNode(String hostName, String ipAddress, int port, ArrayList<MessagingNode> connectedNodes){
         this.hostName = hostName;
@@ -28,44 +36,68 @@ public class MessagingNode {
     }
 
 
-
     public static void main (String[] args){
 
+        ServerSocket serverSocket;
+        Socket socket;
+
         BlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
-        new MessagingNodeServer(args[0],Integer.parseInt(args[1]),queue).start();
         new MessagingNodeCommands(queue).start();
+        try {
+            InetAddress inetAddress = InetAddress.getLocalHost();
+            String ipAddress = inetAddress.getHostAddress();
+            String hostName = inetAddress.getCanonicalHostName();
+            serverSocket = new ServerSocket(0);
+            int port = serverSocket.getLocalPort();
+
+            //Tells registry ready to register.
+            socket = new Socket(args[0], Integer.parseInt(args[1]));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            RegisterRequest registerRequest = new RegisterRequest(ipAddress, hostName, port);
+            registerRequest.send(out);
+
+            //Receives response message from the registry.
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            if( Integer.parseInt(input.readLine()) == REGISTER_RESPONSE ) {
+                if( Integer.parseInt(input.readLine()) == 1 ) {
+                    String responseText = input.readLine();
+                    System.out.println(responseText);
+
+                    Socket socket2 = serverSocket.accept();
+
+                }
+                else {
+                    System.out.println("failed registration");
+                }
+            }
+
+
+
+
+
+
+
+
+            //At the end, deregister.
+            DeregisterRequest deregisterRequest = new DeregisterRequest(ipAddress, hostName, port);
+            deregisterRequest.send(out);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }
 
-class MessagingNodeServer extends Thread{
+class MessagingNodeConnection extends Thread{
 
     ServerSocket serverSocket;
     Socket socket;
     private BlockingQueue<String> queue;
 
-    MessagingNodeServer(String registryAddress, int registryPort, BlockingQueue<String> queue){
+    MessagingNodeConnection(String registryAddress, int registryPort, BlockingQueue<String> queue){
 
         this.queue = queue;
-        try {
-            InetAddress inetAddress = InetAddress.getLocalHost();
-            String ipAddress = inetAddress.getHostAddress();
-            String hostName = inetAddress.getCanonicalHostName();
-            this.serverSocket = new ServerSocket(0);
-            int port = serverSocket.getLocalPort();
 
-            //Tells registry ready to register.
-            this.socket = new Socket(registryAddress, registryPort);
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            RegisterRequest.send(out);
-
-            //receives message back
-            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            String text = input.readLine();
-            System.out.println(text);
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
     }
 }
 

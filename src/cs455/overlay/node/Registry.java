@@ -1,5 +1,11 @@
 package cs455.overlay.node;
 
+import cs455.overlay.wireformats.RegisterResponse;
+
+import static cs455.overlay.wireformats.WireFormatConstants.DEREGISTER_REQUEST;
+import static cs455.overlay.wireformats.WireFormatConstants.REGISTER_REQUEST;
+import static cs455.overlay.wireformats.WireFormatConstants.SETUP_OVERLAY;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -12,7 +18,7 @@ import java.util.concurrent.BlockingQueue;
 public class Registry {
 
     public static void main(String[] args){
-        BlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
+        BlockingQueue<MessagingNode> queue = new ArrayBlockingQueue<>(10);
         new RegistryServerCommands(queue).start();
         new RegistryServer(Integer.parseInt(args[0]), queue).start();
     }
@@ -23,9 +29,9 @@ class RegistryServer extends Thread{
     ServerSocket serverSocket;
     Socket socket;
     private int port;
-    private BlockingQueue<String> queue;
+    private BlockingQueue<MessagingNode> queue;
 
-    RegistryServer(int port, BlockingQueue<String> queue){
+    RegistryServer(int port, BlockingQueue<MessagingNode> queue){
         this.port = port;
         this.queue = queue;
     }
@@ -33,11 +39,16 @@ class RegistryServer extends Thread{
     //TODO: Create data structure for nodes.
     //TODO: Actually register the nodes and do the checking.
     public void registerNode(String message){
-        System.out.println(message);
         try {
-            queue.put(message);
+            String[] messageSplit = message.split("\n");
+
+            MessagingNode messagingNode = new MessagingNode(messageSplit[0],Integer.parseInt(messageSplit[1]));
+
+            queue.put(messagingNode);
+
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            out.println("response");
+            RegisterResponse registerResponse = new RegisterResponse((byte)1,"Registration request successful. The number of messaging nodes currently constituting the overlay is (1)");
+            registerResponse.send(out);
         }
         catch(Exception e){
             e.printStackTrace();
@@ -59,14 +70,21 @@ class RegistryServer extends Thread{
                 BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String requestLine = input.readLine();
 
-                if(requestLine.contains("Message Type (int): REGISTER_REQUEST")){
-                    String request = requestLine + "\n" + input.readLine() + "\n" + input.readLine();
+                if( Integer.parseInt(requestLine) == REGISTER_REQUEST ){
+                    String request = input.readLine() + "\n" + input.readLine();
                     registerNode(request);
                 }
 
-                else if(requestLine.contains("Message Type (int): DEREGISTER_REQUEST")){
+                else if( Integer.parseInt(requestLine) == DEREGISTER_REQUEST ){
                     deregisterNode();
                 }
+
+                else if( Integer.parseInt(requestLine) == SETUP_OVERLAY ){
+
+                }
+
+
+                socket.close();
             }
         }
         catch(Exception e){
@@ -78,9 +96,9 @@ class RegistryServer extends Thread{
 //TODO: GET ACTUAL COMMANDS WORKING.
 class RegistryServerCommands extends Thread{
 
-    private BlockingQueue<String> queue;
+    private BlockingQueue<MessagingNode> queue;
 
-    RegistryServerCommands(BlockingQueue<String> queue) {
+    RegistryServerCommands(BlockingQueue<MessagingNode> queue) {
         this.queue = queue;
     }
 
@@ -96,9 +114,12 @@ class RegistryServerCommands extends Thread{
             try {
 
                 if (command.equals("list-messaging nodes")) {
-
-                    while(!queue.isEmpty())
-                        System.out.println("I GOT IT " + queue.take());
+                    if(!queue.isEmpty()) {
+                        MessagingNode[] nodes = queue.toArray(new MessagingNode[queue.size()]);
+                        for (MessagingNode node : nodes) {
+                            System.out.println(node.ipAddress + ":" + node.port);
+                        }
+                    }
 
                 } else if (command.contains("list-weights")) {
 
