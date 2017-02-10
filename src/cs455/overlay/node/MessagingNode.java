@@ -74,10 +74,6 @@ public class MessagingNode {
 
 
 
-
-
-
-
             //At the end, deregister.
             DeregisterRequest deregisterRequest = new DeregisterRequest(ipAddress, hostName, port);
             deregisterRequest.send(out);
