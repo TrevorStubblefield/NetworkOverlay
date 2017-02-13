@@ -3,9 +3,7 @@ package cs455.overlay.node;
 import cs455.overlay.wireformats.DeregisterRequest;
 import cs455.overlay.wireformats.RegisterRequest;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -15,68 +13,86 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
+import static cs455.overlay.wireformats.WireFormatConstants.MESSAGING_NODES_LIST;
 import static cs455.overlay.wireformats.WireFormatConstants.REGISTER_RESPONSE;
 
 public class MessagingNode {
 
-    String hostName,ipAddress;
-    int port;
-    List<MessagingNode> connectedNodes;
+    //Messaging Node Specific Data
+    public String hostName,ipAddress;
+    public int port;
+    public List<MessagingNode> connectedNodes;
+    public int[] connectedWeights;
 
-    public MessagingNode(String ipAddress, int port){
+    public MessagingNode(String ipAddress, String hostName, int port){
         this.ipAddress = ipAddress;
-        this.port = port;
-    }
-
-    public MessagingNode(String hostName, String ipAddress, int port, ArrayList<MessagingNode> connectedNodes){
         this.hostName = hostName;
-        this.ipAddress = ipAddress;
         this.port = port;
-        this.connectedNodes = connectedNodes;
+        this.connectedNodes = new ArrayList<>();
     }
 
+    public int numberOfConnections(){
+        return connectedNodes.size();
+    }
 
     public static void main (String[] args){
 
         ServerSocket serverSocket;
         Socket socket;
+        String ipAddress;
+        int port;
+
+        DataOutputStream out;
 
         BlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
         new MessagingNodeCommands(queue).start();
+
         try {
+            System.out.println("Messaging Node Running...");
             InetAddress inetAddress = InetAddress.getLocalHost();
-            String ipAddress = inetAddress.getHostAddress();
-            String hostName = inetAddress.getCanonicalHostName();
+            ipAddress = inetAddress.getHostAddress();
             serverSocket = new ServerSocket(0);
-            int port = serverSocket.getLocalPort();
+            port = serverSocket.getLocalPort();
 
             //Tells registry ready to register.
             socket = new Socket(args[0], Integer.parseInt(args[1]));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            RegisterRequest registerRequest = new RegisterRequest(ipAddress, hostName, port);
+            out = new DataOutputStream(socket.getOutputStream());
+            RegisterRequest registerRequest = new RegisterRequest(ipAddress, port);
             registerRequest.send(out);
 
-            //Receives response message from the registry.
-            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            if( Integer.parseInt(input.readLine()) == REGISTER_RESPONSE ) {
-                if( Integer.parseInt(input.readLine()) == 1 ) {
-                    String responseText = input.readLine();
-                    System.out.println(responseText);
+            //Receives messages from the registry.
+            DataInputStream input;
+            int messageType;
+            do {
 
-                    Socket socket2 = serverSocket.accept();
+                input = new DataInputStream(socket.getInputStream());
+                messageType = input.readInt();
+
+                if (messageType == REGISTER_RESPONSE) {
+                    if (input.readByte() == 1) {
+                        byte[] infoInBytes = new byte[input.available()];
+                        int i = 0;
+                        while(input.available() > 0){
+                            infoInBytes[i] = input.readByte();
+                            i++;
+                        }
+                        String additionalInfo = new String(infoInBytes, "UTF-8");
+                        System.out.println(additionalInfo);
+                    } else {
+                        System.out.println("failed registration");
+                        messageType = -1;
+                    }
+                }
+
+                else if (messageType == MESSAGING_NODES_LIST){
+                    int numberOfConnections = Integer.parseInt(input.readLine());
+                    for(int i = 1; i <= numberOfConnections; i++){
+
+                    }
 
                 }
-                else {
-                    System.out.println("failed registration");
-                }
-            }
 
-
-
-
-            //At the end, deregister.
-            DeregisterRequest deregisterRequest = new DeregisterRequest(ipAddress, hostName, port);
-            deregisterRequest.send(out);
+            }while(messageType != -1);
         }
         catch(Exception e){
             e.printStackTrace();
@@ -112,9 +128,18 @@ class MessagingNodeCommands extends Thread{
 
         do {
             Scanner cmdScanner = new Scanner(System.in);
-            command = cmdScanner.next();
-            System.out.println(command);
+            command = cmdScanner.nextLine();
+            try {
 
+                if (command.equals("print-shortest-path")) {
+
+                } else if (command.contains("exit-overlay")) {
+
+                }
+            }
+            catch(Exception e){
+                e.printStackTrace();
+            }
         }while(!command.equals("exit"));
     }
 }

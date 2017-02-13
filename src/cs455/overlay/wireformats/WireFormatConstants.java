@@ -8,6 +8,7 @@ public class WireFormatConstants {
     public static final int DEREGISTER_REQUEST = 2;
     public static final int REGISTER_RESPONSE = 3;
     public static final int SETUP_OVERLAY = 4;
+    public static final int MESSAGING_NODES_LIST = 5;
 
 
 }

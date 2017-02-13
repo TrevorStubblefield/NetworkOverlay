@@ -1,6 +1,7 @@
 package cs455.overlay.wireformats;
 
-import java.io.PrintWriter;
+import java.io.DataOutputStream;
+import java.nio.ByteBuffer;
 
 import static cs455.overlay.wireformats.WireFormatConstants.REGISTER_RESPONSE;
 
@@ -16,10 +17,19 @@ public class RegisterResponse implements Protocol {
     }
 
     @Override
-    public void send(PrintWriter out){
-        out.println(MESSAGE_TYPE);
-        out.println(STATUS_CODE);
-        out.println(ADDITIONAL_INFO);
+    public void send(DataOutputStream out){
+
+        byte[] messageTypeInBytes = ByteBuffer.allocate(4).putInt(MESSAGE_TYPE).array();
+        byte[] additionalInfoInBytes = ADDITIONAL_INFO.getBytes();
+
+        try {
+            out.write(messageTypeInBytes);
+            out.write(STATUS_CODE);
+            out.write(additionalInfoInBytes);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
 }

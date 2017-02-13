@@ -1,8 +1,8 @@
 package cs455.overlay.wireformats;
 
-import java.io.PrintWriter;
+import java.io.DataOutputStream;
 
 public interface Protocol {
 
-    public void send(PrintWriter out);
+    public void send(DataOutputStream out);
 }
