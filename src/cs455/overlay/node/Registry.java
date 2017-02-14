@@ -76,24 +76,51 @@ class RegistryHandler extends Thread{
     
     public void setupOverlay(int numberOfRequiredConnections){
 
-        int currentNode = 0;
         MessagingNode[] messagingNodes = queue.toArray(new MessagingNode[queue.size()]);
-
-        for (MessagingNode messagingNode : messagingNodes) {
+        MessagingNode messagingNode;
+        for (int i = 0; i < messagingNodes.length; i++) {
+            messagingNode = messagingNodes[i];
             messagingNode.connectedWeights = new int[numberOfRequiredConnections];
             ArrayList<MessagingNode> connectedMessagingNodes = new ArrayList<>();
-            while(messagingNode.numberOfConnections() < numberOfRequiredConnections){
-                Random random = new Random();
-                int randomNum = random.nextInt(10);
-                if(randomNum != currentNode) {
-                    if (messagingNode.numberOfConnections() < numberOfRequiredConnections && messagingNodes[randomNum].numberOfConnections() < numberOfRequiredConnections) {
-                        if (!messagingNode.connectedNodes.contains(messagingNodes[randomNum]) && !(messagingNodes[randomNum].connectedNodes.contains(messagingNode))) {
-                            messagingNode.connectedNodes.add(messagingNodes[randomNum]);
-                            messagingNodes[randomNum].connectedNodes.add(messagingNode);
-                        }
+
+            if(messagingNode.numberOfConnections() < numberOfRequiredConnections){
+                if(i == 0){
+                    messagingNode.connectedNodes.add(messagingNodes[messagingNodes.length-1]);
+                    messagingNodes[messagingNodes.length-1].connectedNodes.add(messagingNode);
+
+                    messagingNode.connectedNodes.add(messagingNodes[messagingNodes.length-1]);
+                    messagingNodes[messagingNodes.length-2].connectedNodes.add(messagingNode);
+
+                    messagingNode.connectedNodes.add(messagingNodes[i+1]);
+                    messagingNodes[i+1].connectedNodes.add(messagingNode);
+
+                    messagingNode.connectedNodes.add(messagingNodes[i+2]);
+                    messagingNodes[i+2].connectedNodes.add(messagingNode);
+                }
+                else if (i == 1){
+                    messagingNode.connectedNodes.add(messagingNodes[messagingNodes.length-1]);
+                    messagingNodes[messagingNodes.length-1].connectedNodes.add(messagingNode);
+
+                    messagingNode.connectedNodes.add(messagingNodes[i+1]);
+                    messagingNodes[i+1].connectedNodes.add(messagingNode);
+
+                    messagingNode.connectedNodes.add(messagingNodes[i+2]);
+                    messagingNodes[i+2].connectedNodes.add(messagingNode);
+                }
+                else{
+                    if(i+1 < messagingNodes.length) {
+                        messagingNode.connectedNodes.add(messagingNodes[i + 1]);
+                        messagingNodes[i + 1].connectedNodes.add(messagingNode);
+                    }
+
+                    if(i+2 < messagingNodes.length) {
+                        messagingNode.connectedNodes.add(messagingNodes[i + 2]);
+                        messagingNodes[i + 2].connectedNodes.add(messagingNode);
                     }
                 }
             }
+
+
 
             try {
                 for (MessagingNode connectedNode : messagingNode.connectedNodes){
@@ -107,12 +134,13 @@ class RegistryHandler extends Thread{
                 e.printStackTrace();
             }
 
-            currentNode++;
         }
     }
 
     public void sendOverlayLinkWeights(){
+        MessagingNode[] messagingNodes = queue.toArray(new MessagingNode[queue.size()]);
 
+        
     }
 
 

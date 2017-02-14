@@ -10,7 +10,7 @@ public class WireFormatConstants {
     public static final int SETUP_OVERLAY = 4;
     public static final int MESSAGING_NODES_LIST = 5;
     public static final int SEND_OVERLAY_LINK_WEIGHTS = 6;
-
+    public static final int LINK_WEIGHTS = 7;
 
 
 }
