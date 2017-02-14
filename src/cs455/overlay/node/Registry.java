@@ -4,19 +4,19 @@ import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.RegisterResponse;
 import cs455.overlay.wireformats.SetupOverlay;
 
-import static cs455.overlay.wireformats.WireFormatConstants.DEREGISTER_REQUEST;
-import static cs455.overlay.wireformats.WireFormatConstants.REGISTER_REQUEST;
-import static cs455.overlay.wireformats.WireFormatConstants.SETUP_OVERLAY;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
+import static cs455.overlay.wireformats.WireFormatConstants.*;
 
 public class Registry {
 
@@ -90,13 +90,15 @@ class RegistryHandler extends Thread{
                         if (!messagingNode.connectedNodes.contains(messagingNodes[randomNum]) && !(messagingNodes[randomNum].connectedNodes.contains(messagingNode))) {
                             messagingNode.connectedNodes.add(messagingNodes[randomNum]);
                             messagingNodes[randomNum].connectedNodes.add(messagingNode);
-                            connectedMessagingNodes.add(messagingNodes[randomNum]);
                         }
                     }
                 }
             }
 
             try {
+                for (MessagingNode connectedNode : messagingNode.connectedNodes){
+                    connectedMessagingNodes.add(connectedNode);
+                }
                 DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 MessagingNodesList messagingNodesList = new MessagingNodesList(numberOfRequiredConnections,connectedMessagingNodes);
                 messagingNodesList.send(out);
@@ -107,6 +109,10 @@ class RegistryHandler extends Thread{
 
             currentNode++;
         }
+    }
+
+    public void sendOverlayLinkWeights(){
+
     }
 
 
@@ -144,6 +150,11 @@ class RegistryHandler extends Thread{
                 else if( requestFormat == SETUP_OVERLAY ){
                     int numberOfRequiredConnections = input.readInt();
                     setupOverlay(numberOfRequiredConnections);
+                    socket.close();
+                }
+
+                else if( requestFormat == SEND_OVERLAY_LINK_WEIGHTS ){
+                    sendOverlayLinkWeights();
                     socket.close();
                 }
 
@@ -193,6 +204,7 @@ class RegistryServerCommands extends Thread{
                                 int connectedNodeIndex = node.connectedNodes.indexOf(connectedNode);
                                 int connectedNodeWeight = node.connectedWeights[connectedNodeIndex];
                                 System.out.println(node.hostName + ":" + node.port + " " + connectedNode.hostName + ":" + connectedNode.port + " " + connectedNodeWeight);
+                                //System.out.println(node.hostName + ":" + node.port + " " + connectedNode.hostName + ":" + connectedNode.port);
                             }
                             System.out.println();
                         }
@@ -208,6 +220,11 @@ class RegistryServerCommands extends Thread{
                     setupOverlay.send(out);
 
                 } else if (command.contains("send-overlay-link-weights")) {
+
+                    Socket socket = new Socket("localhost",port);
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                    byte[] message = ByteBuffer.allocate(4).putInt(SEND_OVERLAY_LINK_WEIGHTS).array();
+                    out.write(message);
 
                 } else if (command.contains("start")) {
 

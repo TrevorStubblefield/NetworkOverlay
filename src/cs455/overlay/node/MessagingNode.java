@@ -47,12 +47,15 @@ public class MessagingNode {
         BlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
         new MessagingNodeCommands(queue).start();
 
+
         try {
             System.out.println("Messaging Node Running...");
             InetAddress inetAddress = InetAddress.getLocalHost();
             ipAddress = inetAddress.getHostAddress();
             serverSocket = new ServerSocket(0);
             port = serverSocket.getLocalPort();
+
+            new MessagingNodeListener(queue, serverSocket).start();
 
             //Tells registry ready to register.
             socket = new Socket(args[0], Integer.parseInt(args[1]));
@@ -85,8 +88,22 @@ public class MessagingNode {
                 }
 
                 else if (messageType == MESSAGING_NODES_LIST){
-                    int numberOfConnections = Integer.parseInt(input.readLine());
+                    int numberOfConnections = input.readInt();
                     for(int i = 1; i <= numberOfConnections; i++){
+
+                        byte[] received = new byte[input.available()];
+                        int j = 0;
+                        while(input.available() > 0){
+                            received[j] = input.readByte();
+                            j++;
+                        }
+                        String connectedNodeString = new String(received, "UTF-8");
+                        String[] messageSplit = connectedNodeString.split(":");
+                        String connectedNodeHostName = messageSplit[0];
+                        String connectedNodePort = messageSplit[1];
+                        //if doesnt contain a connection (look at queue)
+                        //socket = new socket(hostname, port);
+
 
                     }
 
@@ -100,17 +117,52 @@ public class MessagingNode {
     }
 }
 
-class MessagingNodeConnection extends Thread{
+
+class MessagingNodeListener extends Thread {
 
     ServerSocket serverSocket;
     Socket socket;
-    private BlockingQueue<String> queue;
+    BlockingQueue<String> queue;
 
-    MessagingNodeConnection(String registryAddress, int registryPort, BlockingQueue<String> queue){
+    MessagingNodeListener(BlockingQueue<String> queue, ServerSocket serverSocket){
 
         this.queue = queue;
+        this.serverSocket = serverSocket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                socket = serverSocket.accept();
+                new MessagingNodeConnection(queue, socket).start();
+            }
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+}
+
+class MessagingNodeConnection extends Thread{
+
+
+    Socket socket;
+    private BlockingQueue<String> queue;
+
+    MessagingNodeConnection(BlockingQueue<String> queue, Socket socket){
+
+        this.queue = queue;
+        this.socket = socket;
+    }
+
+    @Override
+    public void run(){
 
     }
+
+
 }
 
 class MessagingNodeCommands extends Thread{

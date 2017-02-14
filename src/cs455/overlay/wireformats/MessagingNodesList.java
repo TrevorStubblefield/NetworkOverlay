@@ -24,11 +24,11 @@ public class MessagingNodesList implements Protocol {
     public void send(DataOutputStream out){
 
         byte[] messageTypeInBytes = ByteBuffer.allocate(4).putInt(MESSAGE_TYPE).array();
-        byte[] portInBytes = ByteBuffer.allocate(4).putInt(NUMBER_OF_MESSAGING_NODES).array();
+        byte[] numberNodesInBytes = ByteBuffer.allocate(4).putInt(NUMBER_OF_MESSAGING_NODES).array();
 
         try {
             out.write(messageTypeInBytes);
-            out.write(portInBytes);
+            out.write(numberNodesInBytes);
 
             for (MessagingNode messagingNode : MESSAGING_NODE_LIST) {
                 String connectionInfo = messagingNode.hostName + ":" + messagingNode.port;
