@@ -31,7 +31,7 @@ public class MessagingNodesList implements Protocol {
             out.write(numberNodesInBytes);
 
             for (MessagingNode messagingNode : MESSAGING_NODE_LIST) {
-                String connectionInfo = messagingNode.hostName + ":" + messagingNode.port;
+                String connectionInfo = messagingNode.hostName + ":" + messagingNode.port + " ";
                 out.write(connectionInfo.getBytes());
             }
         }

@@ -23,16 +23,22 @@ public class MessagingNode {
     public int port;
     public List<MessagingNode> connectedNodes;
     public int[] connectedWeights;
+    DataOutputStream outputStream;
 
-    public MessagingNode(String ipAddress, String hostName, int port){
+    public MessagingNode(String ipAddress, String hostName, int port, DataOutputStream outputStream){
         this.ipAddress = ipAddress;
         this.hostName = hostName;
         this.port = port;
         this.connectedNodes = new ArrayList<>();
+        this.outputStream = outputStream;
     }
 
     public int numberOfConnections(){
         return connectedNodes.size();
+    }
+
+    public int getWeightOfConnection(MessagingNode connectedNode){
+        return connectedWeights[connectedNodes.indexOf(connectedNode)];
     }
 
     public static void main (String[] args){
@@ -64,11 +70,9 @@ public class MessagingNode {
             registerRequest.send(out);
 
             //Receives messages from the registry.
-            DataInputStream input;
+            DataInputStream input = new DataInputStream(socket.getInputStream());
             int messageType;
             do {
-
-                input = new DataInputStream(socket.getInputStream());
                 messageType = input.readInt();
 
                 if (messageType == REGISTER_RESPONSE) {
@@ -89,22 +93,30 @@ public class MessagingNode {
 
                 else if (messageType == MESSAGING_NODES_LIST){
                     int numberOfConnections = input.readInt();
-                    for(int i = 1; i <= numberOfConnections; i++){
+                    Thread.sleep(10);
 
-                        byte[] received = new byte[input.available()];
-                        int j = 0;
-                        while(input.available() > 0){
-                            received[j] = input.readByte();
-                            j++;
+                    byte[] received = new byte[input.available()];
+                    Thread.sleep(10);
+                    int j = 0;
+                    System.out.println(received.length);
+
+                    while(input.available() > 0){
+                        received[j] = input.readByte();
+                        j++;
+                    }
+                    String connectedNodeString = new String(received, "UTF-8");
+                    System.out.println(connectedNodeString);
+                    String[] messageSplit = connectedNodeString.split(" ");
+                    for (String connection : messageSplit){
+                        if(!connection.equals(" ") && !connection.isEmpty()) {
+                            String[] connectionSplit = connection.split(":");
+                            String connectionHostName = connectionSplit[0];
+                            String connectionPort = connectionSplit[1];
                         }
-                        String connectedNodeString = new String(received, "UTF-8");
-                        String[] messageSplit = connectedNodeString.split(":");
-                        String connectedNodeHostName = messageSplit[0];
-                        String connectedNodePort = messageSplit[1];
+
                         //if doesnt contain a connection (look at queue)
-                        //socket = new socket(hostname, port);
-
-
+                        //Socket connectionSocket = new Socket(connectionHostName, Integer.parseInt(connectionPort));
+                        //new thread based on connectionSocket.
                     }
 
                 }
@@ -128,6 +140,7 @@ class MessagingNodeListener extends Thread {
 
         this.queue = queue;
         this.serverSocket = serverSocket;
+
     }
 
     @Override
@@ -155,6 +168,7 @@ class MessagingNodeConnection extends Thread{
 
         this.queue = queue;
         this.socket = socket;
+
     }
 
     @Override

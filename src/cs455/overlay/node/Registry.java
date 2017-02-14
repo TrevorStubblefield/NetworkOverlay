@@ -1,5 +1,6 @@
 package cs455.overlay.node;
 
+import cs455.overlay.wireformats.LinkWeights;
 import cs455.overlay.wireformats.MessagingNodesList;
 import cs455.overlay.wireformats.RegisterResponse;
 import cs455.overlay.wireformats.SetupOverlay;
@@ -57,7 +58,7 @@ class RegistryHandler extends Thread{
         try {
             String[] messageSplit = message.split("\n");
 
-            MessagingNode messagingNode = new MessagingNode(messageSplit[0],messageSplit[1],Integer.parseInt(messageSplit[2]));
+            MessagingNode messagingNode = new MessagingNode(messageSplit[0],messageSplit[1],Integer.parseInt(messageSplit[2]),new DataOutputStream(socket.getOutputStream()));
 
             queue.put(messagingNode);
 
@@ -76,7 +77,18 @@ class RegistryHandler extends Thread{
     
     public void setupOverlay(int numberOfRequiredConnections){
 
+        //Creates a randomized array of the messaging nodes, therefore connections are randomized.
         MessagingNode[] messagingNodes = queue.toArray(new MessagingNode[queue.size()]);
+        Random random = new Random();
+        for (int i = messagingNodes.length - 1; i > 0; i--)
+        {
+            int index = random.nextInt(i + 1);
+            MessagingNode swap = messagingNodes[index];
+            messagingNodes[index] = messagingNodes[i];
+            messagingNodes[i] = swap;
+        }
+
+
         MessagingNode messagingNode;
         for (int i = 0; i < messagingNodes.length; i++) {
             messagingNode = messagingNodes[i];
@@ -88,7 +100,7 @@ class RegistryHandler extends Thread{
                     messagingNode.connectedNodes.add(messagingNodes[messagingNodes.length-1]);
                     messagingNodes[messagingNodes.length-1].connectedNodes.add(messagingNode);
 
-                    messagingNode.connectedNodes.add(messagingNodes[messagingNodes.length-1]);
+                    messagingNode.connectedNodes.add(messagingNodes[messagingNodes.length-2]);
                     messagingNodes[messagingNodes.length-2].connectedNodes.add(messagingNode);
 
                     messagingNode.connectedNodes.add(messagingNodes[i+1]);
@@ -120,15 +132,13 @@ class RegistryHandler extends Thread{
                 }
             }
 
-
-
+            //Sends MESSAGING_NODES_LIST message to all nodes.
             try {
                 for (MessagingNode connectedNode : messagingNode.connectedNodes){
                     connectedMessagingNodes.add(connectedNode);
                 }
-                DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 MessagingNodesList messagingNodesList = new MessagingNodesList(numberOfRequiredConnections,connectedMessagingNodes);
-                messagingNodesList.send(out);
+                messagingNodesList.send(messagingNodes[i].outputStream);
             }
             catch(Exception e){
                 e.printStackTrace();
@@ -138,8 +148,29 @@ class RegistryHandler extends Thread{
     }
 
     public void sendOverlayLinkWeights(){
-        MessagingNode[] messagingNodes = queue.toArray(new MessagingNode[queue.size()]);
 
+        //Create message, send to each node.
+        int numLinks = 0;
+        ArrayList<String> links = new ArrayList<>();
+
+        MessagingNode[] messagingNodes = queue.toArray(new MessagingNode[queue.size()]);
+        for (MessagingNode node : messagingNodes){
+            for (MessagingNode connectedNode : node.connectedNodes){
+                Random random = new Random();
+                int randomNum = random.nextInt(10);
+                node.connectedWeights[node.getWeightOfConnection(connectedNode)] = randomNum;
+                connectedNode.connectedWeights[connectedNode.getWeightOfConnection(node)] = randomNum;
+                String link = node.hostName + ":" + node.port + " " + connectedNode.hostName + ":" + connectedNode.port + " " + randomNum;
+                links.add(link);
+                numLinks++;
+            }
+        }
+
+        LinkWeights linkWeights = new LinkWeights(numLinks, links);
+
+        for(MessagingNode node : messagingNodes){
+            linkWeights.send(node.outputStream);
+        }
         
     }
 
@@ -194,7 +225,7 @@ class RegistryHandler extends Thread{
     }
 }
 
-//TODO: send-overlay-link-weights and start.
+//TODO: start rounds.
 class RegistryServerCommands extends Thread{
 
     private BlockingQueue<MessagingNode> queue;
@@ -232,7 +263,6 @@ class RegistryServerCommands extends Thread{
                                 int connectedNodeIndex = node.connectedNodes.indexOf(connectedNode);
                                 int connectedNodeWeight = node.connectedWeights[connectedNodeIndex];
                                 System.out.println(node.hostName + ":" + node.port + " " + connectedNode.hostName + ":" + connectedNode.port + " " + connectedNodeWeight);
-                                //System.out.println(node.hostName + ":" + node.port + " " + connectedNode.hostName + ":" + connectedNode.port);
                             }
                             System.out.println();
                         }
