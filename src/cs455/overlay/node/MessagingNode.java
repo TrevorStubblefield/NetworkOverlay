@@ -66,8 +66,10 @@ public class MessagingNode {
 
             path = "";
             for(int j = 1; j < parts.length; j++){
-                path += parts[j];
+                path += parts[j] + " ";
             }
+
+            System.out.println(path);
             DataOutputStream out = new DataOutputStream(socketMap.get(sendTo).getOutputStream());
             TrafficMessage trafficMessage = new TrafficMessage(path, data);
             trafficMessage.send(out);
@@ -185,6 +187,10 @@ public class MessagingNode {
                     fullPath = previousNodes.get(previousNode) + "--" + link.weight + "--" + fullPath;
                 }
             }
+        }
+        for(Link link : links.get(source)) {
+            if(link.node.equals(fullPath.split("--")[0]))
+                fullPath = source + "--" + link.weight + "--" + fullPath;
         }
         return fullPath;
     }
@@ -338,6 +344,14 @@ public class MessagingNode {
 
                 else if(messageType == TASK_INITIATE) {
                     Thread.sleep(50);
+
+                    MessagingNode.receiveTracker.getAndSet(0);
+                    MessagingNode.sendTracker.getAndSet(0);
+                    MessagingNode.relayTracker.getAndSet(0);
+                    MessagingNode.sendSummation.getAndSet(0);
+                    MessagingNode.receiveSummation.getAndSet(0);
+
+                    Thread.sleep(50);
                     wait = true;
                     int rounds = input.readInt();
                     for (int i = 0; i < rounds; i++){
@@ -354,7 +368,7 @@ public class MessagingNode {
 
                 else if(messageType == PULL_TRAFFIC_SUMMARY){
                     System.out.println("Finished rounds. Sending TRAFFIC_SUMMARY...");
-                    TrafficSummary trafficSummary = new TrafficSummary(ipAddress,port,sendTracker.get(),receiveTracker.get(),sendSummation.get(),receiveSummation.get(),sendTracker.get());
+                    TrafficSummary trafficSummary = new TrafficSummary(ipAddress,port,sendTracker.get(),receiveTracker.get(),sendSummation.get(),receiveSummation.get(),relayTracker.get());
                     trafficSummary.send(out);
                 }
 
@@ -470,13 +484,15 @@ class MessagingNodeConnection extends Thread{
 
             path = "";
             for(int i = 1; i < parts.length; i++){
-                path += parts[i];
+                path += parts[i] + " ";
             }
 
+            //System.out.println(path);
             MessagingNode.relayTracker.getAndIncrement();
             TrafficMessage request = new TrafficMessage(path, data);
-            if(MessagingNode.socketMap.containsKey(target))
+            if(MessagingNode.socketMap.containsKey(target)) {
                 request.send(new DataOutputStream(MessagingNode.socketMap.get(target).getOutputStream()));
+            }
         } else {
             MessagingNode.receiveTracker.getAndIncrement();
             MessagingNode.receiveSummation.getAndAdd(data);

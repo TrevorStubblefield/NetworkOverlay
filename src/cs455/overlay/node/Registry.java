@@ -37,15 +37,14 @@ public class Registry {
     static BlockingQueue<MessagingNode> queue = new ArrayBlockingQueue<>(100);
 
     public static synchronized void incrementThreadCounter(int a, int b, long c, long d){
-
-        Registry.totalSent += a;
-        Registry.totalReceived += b;
-        Registry.totalSumSent += c;
-        Registry.totalSumReceived += d;
-
+        totalSent += a;
+        totalReceived += b;
+        totalSumSent += c;
+        totalSumReceived += d;
         counter++;
-        if(counter == queue.size())
-            System.out.println("totals:             " + Registry.totalSent + "   " + Registry.totalReceived + "   " + Registry.totalSumSent + "    " + Registry.totalSumReceived);
+    }
+    public static synchronized int getThreadCounter(){
+        return counter;
     }
 
     public static void main(String[] args){
@@ -349,18 +348,11 @@ class RegistryHandler extends Thread{
                     }
                     String ipAddress = new String(ipAddressInBytes, "UTF-8");
 
-//                    Registry.totalSent.getAndAdd(messages_sent);
-//                    Registry.totalReceived.getAndAdd(messages_received);
-//                    Registry.totalSumSent.getAndAdd(sum_sent);
-//                    Registry.totalSumReceived.getAndAdd(sum_received);
-
-//                    Registry.totalSent += messages_sent;
-//                    Registry.totalReceived += messages_received;
-//                    Registry.totalSumSent += sum_sent;
-//                    Registry.totalSumReceived += sum_received;
-
                     System.out.println(ipAddress+":"+port + "   " + messages_sent + "   " + messages_received + "   " + sum_sent + "    " + sum_received + "    " + relayed);
                     Registry.incrementThreadCounter(messages_sent, messages_received, sum_sent, sum_received);
+                    if (Registry.getThreadCounter() == queue.size()) {
+                        System.out.println("totals:              " + Registry.totalSent + "   " + Registry.totalReceived + "   " + Registry.totalSumSent + "    " + Registry.totalSumReceived);
+                    }
 
                 }
 
@@ -433,10 +425,6 @@ class RegistryServerCommands extends Thread{
 
                 } else if (command.contains("start")) {
 
-//                    Registry.totalSent.getAndSet(0);
-//                    Registry.totalReceived.getAndSet(0);
-//                    Registry.totalSumSent.getAndSet(0);
-//                    Registry.totalSumReceived.getAndSet(0);
                     Registry.totalReceived = 0;
                     Registry.totalSent = 0;
                     Registry.totalSumReceived = 0;
